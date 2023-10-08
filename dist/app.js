@@ -10,115 +10,145 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRA
 OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
  */
-import * as o from "three";
-class P extends o.FileLoader {
-  constructor(s) {
-    super(s), this.responseType = "json", this.color = 16777215, this.transform = new o.Matrix4();
+import * as f from "three";
+class v {
+  constructor() {
+    this.transformCallback = (p) => [p.x, p.y], this.projection = "EPSG:9999", this.precision = 8;
   }
-  setColor(s) {
-    return this.color = s, this;
+  setProjection(p) {
+    return this.projection = projection, this;
   }
-  setTransform(s) {
-    return s instanceof o.Matrix4 && (this.transform = s), this;
+  setPrecision(p) {
+    return this.precision = precision, this;
   }
-  load(s, c, f, l) {
-    const h = this;
-    return super.load(
-      s,
-      (b) => {
-        try {
-          const u = h.parse(b);
-          c(u);
-        } catch (u) {
-          l(u);
-        }
-      },
-      f,
-      l
-    );
+  setTransformCallback(p) {
+    return typeof p == "function" && (this.transformCallback = p), this;
   }
-  parse(s) {
-    if (!s)
+  parse(p) {
+    if (!p)
       return null;
-    const c = this, f = (e) => {
-      const t = new o.Vector3(e[0], e[1], 0);
-      return t.applyMatrix4(c.transform), t;
-    }, l = (e) => {
-      const t = new o.BufferGeometry(), r = f(e), a = [];
-      a.push(r.x, r.y, r.z), t.setAttribute("position", new o.Float32BufferAttribute(a, 3));
-      const i = new o.PointsMaterial({ color: c.color });
-      return new o.Points(t, i);
-    }, h = (e) => {
-      const t = new o.BufferGeometry(), r = [];
-      e == null || e.forEach((i) => {
-        const n = f(i);
-        r.push(n.x, n.y, n.z);
-      }), t.setAttribute("position", new o.Float32BufferAttribute(r, 3));
-      const a = new o.LineBasicMaterial({ color: c.color });
-      return new o.Line(t, a);
-    }, b = (e) => {
-      let t = null;
-      e.forEach((i) => {
-        const n = new o.Shape();
-        i.forEach((d, E) => {
-          const [w, y] = d;
-          E === 0 ? n.moveTo(w, y) : n.lineTo(w, y);
-        }), n.lineTo(i[0][0], i[0][1]), t ? t.holes.push(n) : t = n;
-      });
-      const r = new o.ShapeGeometry(t), a = new o.MeshBasicMaterial({ color: c.color, side: o.DoubleSide });
-      return new o.Mesh(r, a);
-    }, u = (e) => {
-      const t = [];
-      switch (e == null ? void 0 : e.type) {
-        case "Point":
-          t.push(l(e.coordinates));
-          break;
-        case "LineString":
-          t.push(h(e.coordinates));
-          break;
-        case "Polygon":
-          t.push(b(e.coordinates));
-          break;
-        case "MultiPoint":
-          e.coordinates.forEach((r) => {
-            t.push(l(r));
-          });
-          break;
-        case "MultiPolygon":
-          e.coordinates.forEach((r) => {
-            t.push(b(r));
-          });
-          break;
-        case "MultiLineString":
-          e.coordinates.forEach((r) => {
-            t.push(h(r));
-          });
-          break;
+    const l = this, x = (t) => {
+      const [e, o] = l.transformCallback(t);
+      return [parseFloat(e.toFixed(l.precision)), parseFloat(o.toFixed(l.precision))];
+    }, u = (t, e, o) => {
+      const r = [], n = e.itemSize;
+      for (let s = 0; s < n; s += 1)
+        r.push(e.array[t * n + s]);
+      const i = new f.Vector3(...r).applyMatrix4(o);
+      return x(i);
+    }, c = (t, e = !1, o = !1) => {
+      const r = {};
+      if (t.material) {
+        const n = `#${t.material.color.getHexString()}`;
+        e && (r.stroke = n), o && (r.fill = n), typeof t.material.opacity < "u" && (e && (r["stroke-opacity"] = t.material.opacity), o && (r["fill-opacity"] = t.material.opacity));
       }
-      return t;
-    }, M = (e) => {
-      if (e.geometry) {
-        const t = u(e.geometry);
-        return t.forEach((r) => {
-          e.properties && (r.userData = {
-            ...e.properties
-          });
-        }), t;
-      }
-      return [];
-    };
-    let p = [];
-    if (Array.isArray(s) ? p = s : s.type === "FeatureCollection" ? p = s.features : s.type === "Feature" && (p = [s]), p.length) {
-      const e = new o.Group();
-      return p.forEach((t) => {
-        M(t).forEach((r) => {
-          e.add(r);
+      return r;
+    }, d = (t) => {
+      if (!(t instanceof f.Points))
+        return [];
+      t.updateMatrix();
+      const e = t.geometry && t.geometry.attributes ? t.geometry.attributes.position : void 0;
+      if (!e)
+        return [];
+      const o = t.matrixWorld.clone(), r = [];
+      for (let n = 0; n < e.count; n += 1)
+        r.push({
+          type: "Feature",
+          properties: c(t, !0),
+          geometry: {
+            type: "Point",
+            coordinates: u(n, e, o)
+          }
         });
-      }), e;
-    }
-    return null;
+      return r;
+    }, F = (t) => {
+      var i, s;
+      t == null || t.updateMatrix();
+      const e = (s = (i = t == null ? void 0 : t.geometry) == null ? void 0 : i.attributes) == null ? void 0 : s.position, o = c(t, !0);
+      if (!e || e.count === 0)
+        return [];
+      const r = t.matrixWorld.clone(), n = [];
+      for (let a = 0; a < e.count; a += 1) {
+        const m = u(a, e, r);
+        n.push(m);
+      }
+      return n.length === 0 ? (console.warn("No coordinates extracted from Line"), []) : [
+        {
+          type: "Feature",
+          properties: o,
+          geometry: {
+            type: "LineString",
+            coordinates: n
+          }
+        }
+      ];
+    }, P = (t) => {
+      var i, s;
+      t == null || t.updateMatrix();
+      const e = (s = (i = t == null ? void 0 : t.geometry) == null ? void 0 : i.attributes) == null ? void 0 : s.position, o = c(t, !0);
+      if (!e || e.count === 0)
+        return [];
+      const r = t.matrixWorld.clone(), n = [];
+      for (let a = 0; a < e.count; a += 2) {
+        const m = u(a, e, r), C = u(a + 1, e, r);
+        n.push({
+          type: "Feature",
+          properties: o,
+          geometry: {
+            type: "LineString",
+            coordinates: [m, C]
+          }
+        });
+      }
+      return n;
+    }, S = (t) => {
+      var n, i;
+      t == null || t.updateMatrix();
+      const e = (i = (n = t == null ? void 0 : t.geometry) == null ? void 0 : n.attributes) == null ? void 0 : i.position;
+      if (!e)
+        return [];
+      const o = t.matrixWorld.clone(), r = [];
+      for (let s = 0; s < e.count; s += 1) {
+        const a = u(s, e, o);
+        r.push(a);
+      }
+      return r.length > 2 && r.push(r[0]), [
+        {
+          type: "Feature",
+          properties: c(t, !0, !0),
+          geometry: {
+            type: "Polygon",
+            coordinates: [r]
+          }
+        }
+      ];
+    }, g = (t) => {
+      if (!t)
+        return null;
+      const e = [], o = (r) => {
+        var i;
+        if (!r)
+          return;
+        let n = [];
+        r.type === "Points" ? n = d(r) : r.type === "Line" ? n = F(r) : r.type === "LineSegments" ? n = P(r) : r.type === "Mesh" ? n = S(r) : r instanceof f.Scene || r instanceof f.Group || r instanceof f.Object3D ? (r == null || r.updateMatrix(), (i = r == null ? void 0 : r.children) == null || i.forEach((s) => {
+          const a = g(s);
+          a && n.push(...a);
+        })) : console.warn("Skipping unsupported type"), e.push(...n || []);
+      };
+      return t.traverse(o), e;
+    }, y = g(p);
+    return y != null && y.length ? {
+      type: "FeatureCollection",
+      features: y,
+      crs: {
+        type: "name",
+        properties: {
+          name: l.projection
+        }
+      }
+    } : null;
   }
 }
 export {
-  P as GeoJsonLoader
+  v as GeoJsonExporter
 };

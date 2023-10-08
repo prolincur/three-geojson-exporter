@@ -1,7 +1,7 @@
 {
   "name": "three-geojson-exporter",
   "version": "1.0.0",
-  "description": "Cross platform GeoJSON loader for three.js. Out of the box usable with react-three-fibre.",
+  "description": "Cross platform GeoJSON exporter for three.js. Out of the box usable with react-three-fibre.",
   "module": "src/main.js",
   "main": "dist/app.js",
   "exports": {
